@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { apiClient } from '../services/api';
-import type { BulkCommentRequest, BulkCommentResponse, BulkCommentResult } from '../types';
+import type { BulkCommentRequest, BulkCommentResult } from '../types';
 
 interface UseBulkCommentState {
   isRunning: boolean;

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { UserPlus, Play, Pause, CheckCircle } from 'lucide-react';
+import { UserPlus, Play, CheckCircle, AlertCircle } from 'lucide-react';
 import UserSelector from '../components/UserSelector';
 import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../hooks/useAuth';
+import { useBulkFollow } from '../hooks/useBulkFollow';
 
 interface ImvuUser {
   display_name: string;
@@ -15,19 +16,30 @@ interface ImvuUser {
 }
 
 const BulkFollow: React.FC = () => {
-  const [isRunning, setIsRunning] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ImvuUser | null>(null);
-  const [progress, setProgress] = useState(0);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const { 
+    isRunning, 
+    results, 
+    error, 
+    completed, 
+    successCount, 
+    failedCount, 
+    startBulkFollow, 
+    reset 
+  } = useBulkFollow();
   const { user } = useAuth();
 
   const handleUserAdd = (user: ImvuUser) => {
     setSelectedUser(user);
+    reset(); // Reset previous results when selecting a new user
   };
 
   const handleUserRemove = () => {
     setSelectedUser(null);
-  };  const handleStart = async () => {
+    reset();
+  };
+    const handleStart = async () => {
     // Check if user is authenticated
     if (!user) {
       setShowLoginPrompt(true);
@@ -37,46 +49,8 @@ const BulkFollow: React.FC = () => {
     if (!selectedUser) {
       return;
     }
-
-    setIsRunning(true);
-    setProgress(0);
-
-    try {
-      const response = await fetch('http://localhost:3000/api/auto-follow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          usernameToFollow: selectedUser.username
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start auto-follow');
-      }
-
-      // Simulate progress
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsRunning(false);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 500);
-    } catch (error) {
-      console.error('Auto-follow error:', error);
-      setIsRunning(false);
-    }
-  };
-
-  const handleStop = () => {
-    setIsRunning(false);
-    setProgress(0);
+    
+    await startBulkFollow(selectedUser.username);
   };
 
   return (
@@ -117,26 +91,18 @@ const BulkFollow: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Progress Section */}
-          {(isRunning || progress > 0) && (
+          </div>          {/* Progress Section */}
+          {(isRunning || completed) && (
             <div className="card p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Progress</h3>
               <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Overall Progress</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${completed ? 100 : isRunning ? 50 : 0}%` }}
+                  ></div>
                 </div>
-                  <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-bold text-green-600">
                       {selectedUser ? 1 : 0}
@@ -145,7 +111,7 @@ const BulkFollow: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-blue-600">
-                      {progress > 0 ? 'Following...' : 'Ready'}
+                      {isRunning ? 'Following...' : completed ? 'Completed' : 'Ready'}
                     </p>
                     <p className="text-sm text-gray-600">Status</p>
                   </div>
@@ -173,24 +139,31 @@ const BulkFollow: React.FC = () => {
                     Search and add a user to get started
                   </p>
                 )}
-              </div>
-
-              <div className="space-y-3">                {!isRunning ? (
+              </div>              <div className="space-y-3">
+                <button
+                  onClick={handleStart}
+                  disabled={!selectedUser || isRunning}
+                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRunning ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Bulk Follow
+                    </>
+                  )}
+                </button>
+                
+                {(completed || error) && (
                   <button
-                    onClick={handleStart}
-                    disabled={!selectedUser}
-                    className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={reset}
+                    className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Follow Process
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleStop}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-                  >
-                    <Pause className="w-4 h-4 mr-2" />
-                    Stop Process
+                    Reset
                   </button>
                 )}
               </div>
@@ -198,7 +171,7 @@ const BulkFollow: React.FC = () => {
           </div>          {/* Operation Results */}
           <div className="card p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Operation Results</h3>
-            {!isRunning && progress === 0 ? (
+            {!isRunning && !completed && !error ? (
               <div className="text-center py-4">
                 <div className="text-gray-400 mb-2">
                   <UserPlus className="w-8 h-8 mx-auto" />
@@ -207,6 +180,13 @@ const BulkFollow: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                {error && (
+                  <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="text-red-700">{error}</span>
+                  </div>
+                )}
+                
                 {isRunning && (
                   <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
@@ -214,26 +194,26 @@ const BulkFollow: React.FC = () => {
                   </div>
                 )}
 
-                {progress === 100 && (
+                {completed && (
                   <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
                     <span className="text-green-700">Follow operation completed!</span>
                   </div>
                 )}
                 
-                {(progress > 0) && (
-                  <div className="grid grid-cols-2 gap-4 text-center">
+                {(completed || isRunning) && (
+                  <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                      <p className="text-2xl font-bold text-green-600">
-                        {progress === 100 ? '1' : '0'}
-                      </p>
+                      <p className="text-2xl font-bold text-green-600">{successCount}</p>
                       <p className="text-sm text-gray-600">Followed</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {progress}%
-                      </p>
-                      <p className="text-sm text-gray-600">Progress</p>
+                      <p className="text-2xl font-bold text-red-600">{failedCount}</p>
+                      <p className="text-sm text-gray-600">Failed</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">{results.length}</p>
+                      <p className="text-sm text-gray-600">Total</p>
                     </div>
                   </div>
                 )}
