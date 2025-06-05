@@ -1,50 +1,42 @@
 import React, { useState } from 'react';
-import { Heart, Play, Pause, Trash2 } from 'lucide-react';
+import { Heart, Play, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import PostSelector from '../components/PostSelector';
+import { useBulkLike } from '../hooks/useBulkLike';
 
 const BulkLike: React.FC = () => {
-  const [isRunning, setIsRunning] = useState(false);
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-
+  const { 
+    isRunning, 
+    results, 
+    error, 
+    completed, 
+    successCount, 
+    failedCount, 
+    startBulkLike, 
+    reset 
+  } = useBulkLike();
   const handlePostSelect = (postId: string) => {
     setSelectedPost(postId);
+    reset(); // Reset previous results when selecting a new post
   };
 
   const handlePostDeselect = () => {
     setSelectedPost(null);
+    reset();
   };
 
   const clearSelectedPost = () => {
     setSelectedPost(null);
+    reset();
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!selectedPost) {
       alert('Please select a post to like');
       return;
     }
     
-    setIsRunning(true);
-    // Here you would integrate with your backend API
-    // Example payload: { postId: selectedPost }
-    
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsRunning(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 1000);
-  };
-
-  const handleStop = () => {
-    setIsRunning(false);
-    setProgress(0);
+    await startBulkLike(selectedPost);
   };
 
   return (
@@ -69,9 +61,7 @@ const BulkLike: React.FC = () => {
               title="Select Post to Like"
               description="Search for IMVU users and select the post you want to like"
             />
-          </div>
-
-          {/* Selected Post Summary */}
+          </div>          {/* Selected Post Summary */}
           {selectedPost && (
             <div className="card p-6">
               <div className="flex items-center justify-between mb-4">
@@ -91,46 +81,6 @@ const BulkLike: React.FC = () => {
               </div>
             </div>
           )}
-
-          {/* Progress Section */}
-          {(isRunning || progress > 0) && (
-            <div className="card p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Progress</h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Overall Progress</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-green-600">
-                      {selectedPost ? (progress >= 100 ? 1 : 0) : 0}
-                    </p>
-                    <p className="text-sm text-gray-600">Completed</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-red-600">0</p>
-                    <p className="text-sm text-gray-600">Failed</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-600">
-                      {selectedPost ? (progress >= 100 ? 0 : 1) : 0}
-                    </p>
-                    <p className="text-sm text-gray-600">Remaining</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Control Panel */}
@@ -143,56 +93,90 @@ const BulkLike: React.FC = () => {
                   <Heart className="w-10 h-10 text-primary-600" />
                 </div>
               </div>
-              
-              <div className="text-center space-y-2">
+                <div className="text-center space-y-2">
                 <p className="text-sm text-gray-600">
                   {selectedPost ? '1 post' : '0 posts'} selected
                 </p>
-                <p className="text-xs text-gray-500">
-                  Backend will receive: {JSON.stringify({ postId: selectedPost || 'feed_element-example' }, null, 0)}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {!isRunning ? (
+              </div><div className="space-y-3">
+                <button
+                  onClick={handleStart}
+                  disabled={!selectedPost || isRunning}
+                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRunning ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Bulk Like
+                    </>
+                  )}
+                </button>
+                
+                {(completed || error) && (
                   <button
-                    onClick={handleStart}
-                    disabled={!selectedPost}
-                    className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={reset}
+                    className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Bulk Like
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleStop}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-                  >
-                    <Pause className="w-4 h-4 mr-2" />
-                    Stop Process
+                    Reset
                   </button>
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Statistics */}
+          </div>          {/* Results Panel */}
           <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Stats</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Likes</span>
-                <span className="text-sm font-medium text-gray-900">1,234</span>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Operation Results</h3>
+            {!isRunning && !completed && !error ? (
+              <div className="text-center py-4">
+                <div className="text-gray-400 mb-2">
+                  <Heart className="w-8 h-8 mx-auto" />
+                </div>
+                <p className="text-sm text-gray-500">Results will appear here after starting bulk like operation</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Success Rate</span>
-                <span className="text-sm font-medium text-green-600">94.5%</span>
+            ) : (
+              <div className="space-y-4">
+                {error && (
+                  <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="text-red-700">{error}</span>
+                  </div>
+                )}
+                
+                {isRunning && (
+                  <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-blue-700">Processing bulk like operation...</span>
+                  </div>
+                )}
+
+                {completed && (
+                  <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="text-green-700">Bulk like operation completed!</span>
+                  </div>
+                )}
+                
+                {(completed || isRunning) && (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{successCount}</p>
+                      <p className="text-sm text-gray-600">Liked</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">{failedCount}</p>
+                      <p className="text-sm text-gray-600">Failed</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">{results.length}</p>
+                      <p className="text-sm text-gray-600">Total</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Avg. Speed</span>
-                <span className="text-sm font-medium text-gray-900">12/min</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

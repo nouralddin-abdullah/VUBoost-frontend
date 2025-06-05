@@ -98,3 +98,63 @@ export interface BackendUserResponse {
   status: string;
   user: BackendUser;
 }
+
+// Statistics types
+export interface Statistics {
+  _id: string;
+  totalLikes: number;
+  totalComments: number;
+  totalFollows: number;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+// Activity types
+export interface Activity {
+  _id: string;
+  type: 'like' | 'comment' | 'follow';
+  user: string;
+  targetId: string;
+  totalBots: number;
+  successCount: number;
+  failedCount: number;
+  timeAgo: string;
+  createdAt: string;
+}
+
+export interface ActivitiesResponse {
+  activities: Activity[];
+  total: number;
+}
+
+// Bulk action result types
+export interface BulkLikeResult {
+  email: string;
+  status: 'liked';
+}
+
+export interface BulkCommentResult {
+  email: string;
+  status: 'commented';
+  comment: string;
+}
+
+export interface BulkLikeResponse {
+  message: string;
+  results: BulkLikeResult[];
+}
+
+export interface BulkCommentResponse {
+  message: string;
+  results: BulkCommentResult[];
+}
+
+// Request types for bulk actions
+export interface BulkLikeRequest {
+  postId: string;
+}
+
+export interface BulkCommentRequest {
+  postId: string;
+}

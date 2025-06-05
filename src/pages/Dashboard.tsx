@@ -1,70 +1,92 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, UserPlus, Users, TrendingUp, Activity } from 'lucide-react';
+import { useDashboard } from '../hooks/useDashboard';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  
-  const stats = [
+  const { statistics, activities, loading, error, refetch } = useDashboard();
+
+  // Define type for change type
+  type ChangeType = 'positive' | 'negative' | 'neutral';
+
+  // Create stats array from backend data
+  const stats = statistics ? [
     {
       name: 'Total Likes',
-      value: '12,483',
-      change: '+12%',
-      changeType: 'positive',
+      value: statistics.totalLikes.toLocaleString(),
+      change: '+12%', // You can calculate this based on historical data
+      changeType: 'positive' as ChangeType,
       icon: Heart,
     },
     {
       name: 'Comments Posted',
-      value: '3,291',
+      value: statistics.totalComments.toLocaleString(),
       change: '+8%',
-      changeType: 'positive',
+      changeType: 'positive' as ChangeType,
       icon: MessageCircle,
     },
     {
       name: 'New Followers',
-      value: '1,834',
-      change: '+23%',
-      changeType: 'positive',
+      value: statistics.totalFollows.toLocaleString(),
       icon: UserPlus,
     },
-    {
-      name: 'Active Accounts',
-      value: '24',
-      change: '0%',
-      changeType: 'neutral',
-      icon: Users,
-    },
-  ];
+  ] : [];
 
-  const recentActivities = [
-    {
-      id: '1',
-      action: 'Bulk Like',
-      target: '50 posts',
-      status: 'completed',
-      time: '2 minutes ago',
-      success: 48,
-      failed: 2,
-    },
-    {
-      id: '2',
-      action: 'Bulk Follow',
-      target: '25 users',
-      status: 'completed',
-      time: '15 minutes ago',
-      success: 23,
-      failed: 2,
-    },
-    {
-      id: '3',
-      action: 'Bulk Comment',
-      target: '30 posts',
-      status: 'in_progress',
-      time: '20 minutes ago',
-      success: 15,
-      failed: 0,
-    },
-  ];
+  // Map backend activities to display format
+  const recentActivities = activities.map(activity => ({
+    id: activity._id,
+    action: activity.type === 'follow' ? 'Bulk Follow' : 
+            activity.type === 'like' ? 'Bulk Like' : 'Bulk Comment',
+    target: `${activity.totalBots} accounts used`,
+    status: 'completed' as const,
+    time: activity.timeAgo,
+    success: activity.successCount,
+    failed: activity.failedCount,
+  }));
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2 text-white">Welcome to VU ARABIA</h1>
+          <p className="text-primary-100">
+            Loading your dashboard data...
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="card p-6 animate-pulse">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+                <div className="ml-4 flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2 text-white">Error Loading Dashboard</h1>
+          <p className="text-red-100 mb-4">{error}</p>
+          <button 
+            onClick={refetch}
+            className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">      {/* Welcome Section */}
@@ -73,10 +95,8 @@ const Dashboard: React.FC = () => {
         <p className="text-primary-100">
           Manage your IMVU automation campaigns with powerful bulk actions and real-time analytics.
         </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      </div>      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -103,44 +123,54 @@ const Dashboard: React.FC = () => {
             </div>
           );
         })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      </div><div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <div className="card">
           <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <Activity className="w-5 h-5 text-gray-400 mr-2" />
-              <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Activity className="w-5 h-5 text-gray-400 mr-2" />
+                <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+              </div>
+              <button 
+                onClick={refetch}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                title="Refresh data"
+              >
+                <TrendingUp className="w-4 h-4" />
+              </button>
             </div>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="text-sm font-medium text-gray-900">{activity.action}</h4>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        activity.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        activity.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {activity.status.replace('_', ' ')}
-                      </span>
+            {recentActivities.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-sm font-medium text-gray-900">{activity.action}</h4>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          completed
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{activity.target}</p>
+                      <p className="text-xs text-gray-500">{activity.time}</p>
                     </div>
-                    <p className="text-sm text-gray-600">{activity.target}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-green-600">{activity.success} success</p>
+                      {activity.failed > 0 && (
+                        <p className="text-sm font-medium text-red-600">{activity.failed} failed</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-green-600">{activity.success} success</p>
-                    {activity.failed > 0 && (
-                      <p className="text-sm font-medium text-red-600">{activity.failed} failed</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No recent activities</p>
+              </div>
+            )}
           </div>
         </div>
 

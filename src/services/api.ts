@@ -7,7 +7,13 @@ import type {
   LoginRequest, 
   SignUpRequest, 
   AuthResponse, 
-  User
+  User,
+  Statistics,
+  ActivitiesResponse,
+  BulkLikeRequest,
+  BulkCommentRequest,
+  BulkLikeResponse,
+  BulkCommentResponse
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -198,7 +204,6 @@ class ApiClient {
       method: 'DELETE',
     });
   }
-
   // Bulk actions
   async bulkLike(request: BulkActionRequest): Promise<ApiResponse<string>> {
     return this.request<string>('/actions/bulk-like', {
@@ -221,14 +226,38 @@ class ApiClient {
     });
   }
 
+  // New bulk actions using real backend endpoints
+  async autoLike(request: BulkLikeRequest): Promise<ApiResponse<BulkLikeResponse>> {
+    return this.request<BulkLikeResponse>('/auto-like', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async autoComment(request: BulkCommentRequest): Promise<ApiResponse<BulkCommentResponse>> {
+    return this.request<BulkCommentResponse>('/auto-comment', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
   // Action results
   async getActionResults(actionId: string): Promise<ApiResponse<BulkActionResult[]>> {
     return this.request<BulkActionResult[]>(`/actions/${actionId}/results`);
   }
-
   // Statistics
   async getStats(): Promise<ApiResponse<any>> {
     return this.request<any>('/stats');
+  }
+
+  // Get statistics from backend
+  async getStatistics(): Promise<ApiResponse<Statistics>> {
+    return this.request<Statistics>('/statistics');
+  }
+
+  // Get activities from backend
+  async getActivities(): Promise<ApiResponse<ActivitiesResponse>> {
+    return this.request<ActivitiesResponse>('/statistics/activities');
   }
 
   // Smart refresh logic - only refresh if needed
