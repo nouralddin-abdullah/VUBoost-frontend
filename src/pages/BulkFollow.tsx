@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { UserPlus, Play, Pause } from 'lucide-react';
+import { UserPlus, Play, Pause, CheckCircle } from 'lucide-react';
 import UserSelector from '../components/UserSelector';
+import LoginPrompt from '../components/LoginPrompt';
+import { useAuth } from '../hooks/useAuth';
 
 interface ImvuUser {
   display_name: string;
@@ -14,30 +16,62 @@ interface ImvuUser {
 
 const BulkFollow: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<ImvuUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<ImvuUser | null>(null);
   const [progress, setProgress] = useState(0);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const { user } = useAuth();
 
   const handleUserAdd = (user: ImvuUser) => {
-    setSelectedUsers(prev => [...prev, user]);
+    setSelectedUser(user);
   };
 
-  const handleUserRemove = (userId: number) => {
-    setSelectedUsers(prev => prev.filter(user => user.legacy_cid !== userId));
-  };
+  const handleUserRemove = () => {
+    setSelectedUser(null);
+  };  const handleStart = async () => {
+    // Check if user is authenticated
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
 
-  const handleStart = () => {
+    if (!selectedUser) {
+      return;
+    }
+
     setIsRunning(true);
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsRunning(false);
-          return 100;
-        }
-        return prev + 5;
+    setProgress(0);
+
+    try {
+      const response = await fetch('http://localhost:3000/api/auto-follow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          usernameToFollow: selectedUser.username
+        })
       });
-    }, 1000);
+
+      if (!response.ok) {
+        throw new Error('Failed to start auto-follow');
+      }
+
+      // Simulate progress
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setIsRunning(false);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 500);
+    } catch (error) {
+      console.error('Auto-follow error:', error);
+      setIsRunning(false);
+    }
   };
 
   const handleStop = () => {
@@ -58,14 +92,14 @@ const BulkFollow: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Configuration Panel */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Target Configuration */}
-          <div className="card p-6">
+          {/* Target Configuration */}          <div className="card p-6">
             <UserSelector
-              selectedUsers={selectedUsers}
+              selectedUser={selectedUser}
               onUserAdd={handleUserAdd}
               onUserRemove={handleUserRemove}
-              title="Target Users"
-              description="Search and select IMVU users to follow"
+              title="Target User"
+              description="Search and select one IMVU user to follow"
+              singleSelection={true}
             />
             
             <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -102,19 +136,18 @@ const BulkFollow: React.FC = () => {
                     ></div>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
-                    <p className="text-2xl font-bold text-green-600">67</p>
-                    <p className="text-sm text-gray-600">Followed</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {selectedUser ? 1 : 0}
+                    </p>
+                    <p className="text-sm text-gray-600">Target User</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-red-600">3</p>
-                    <p className="text-sm text-gray-600">Failed</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-600">30</p>
-                    <p className="text-sm text-gray-600">Remaining</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {progress > 0 ? 'Following...' : 'Ready'}
+                    </p>
+                    <p className="text-sm text-gray-600">Status</p>
                   </div>
                 </div>
               </div>
@@ -133,24 +166,23 @@ const BulkFollow: React.FC = () => {
                 </div>
               </div>              <div className="text-center space-y-2">
                 <p className="text-sm text-gray-600">
-                  {selectedUsers.length} users to follow
+                  {selectedUser ? '1 user selected' : 'No user selected'}
                 </p>
-                {selectedUsers.length === 0 && (
+                {!selectedUser && (
                   <p className="text-xs text-gray-500">
-                    Search and add users to get started
+                    Search and add a user to get started
                   </p>
                 )}
               </div>
 
-              <div className="space-y-3">
-                {!isRunning ? (
+              <div className="space-y-3">                {!isRunning ? (
                   <button
                     onClick={handleStart}
-                    disabled={selectedUsers.length === 0}
+                    disabled={!selectedUser}
                     className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Play className="w-4 h-4 mr-2" />
-                    Start Bulk Follow
+                    Start Follow Process
                   </button>
                 ) : (
                   <button
@@ -162,48 +194,60 @@ const BulkFollow: React.FC = () => {
                   </button>
                 )}
               </div>
-
-              {/* Show backend payload format example */}
-              {selectedUsers.length > 0 && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-2">Backend Format:</p>
-                  <code className="text-xs text-gray-800 block">
-                    {JSON.stringify({
-                      users: selectedUsers.map(user => ({
-                        username: user.username,
-                        legacy_cid: user.legacy_cid
-                      }))
-                    }, null, 2)}
-                  </code>
-                </div>
-              )}
             </div>
-          </div>
-
-          {/* Statistics */}
+          </div>          {/* Operation Results */}
           <div className="card p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Stats</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Follows</span>
-                <span className="text-sm font-medium text-gray-900">456</span>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Operation Results</h3>
+            {!isRunning && progress === 0 ? (
+              <div className="text-center py-4">
+                <div className="text-gray-400 mb-2">
+                  <UserPlus className="w-8 h-8 mx-auto" />
+                </div>
+                <p className="text-sm text-gray-500">Results will appear here after starting follow operation</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Success Rate</span>
-                <span className="text-sm font-medium text-green-600">96.8%</span>
+            ) : (
+              <div className="space-y-4">
+                {isRunning && (
+                  <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-blue-700">Processing follow operation...</span>
+                  </div>
+                )}
+
+                {progress === 100 && (
+                  <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="text-green-700">Follow operation completed!</span>
+                  </div>
+                )}
+                
+                {(progress > 0) && (
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">
+                        {progress === 100 ? '1' : '0'}
+                      </p>
+                      <p className="text-sm text-gray-600">Followed</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {progress}%
+                      </p>
+                      <p className="text-sm text-gray-600">Progress</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Avg. Speed</span>
-                <span className="text-sm font-medium text-gray-900">4/min</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Follow Backs</span>
-                <span className="text-sm font-medium text-blue-600">23%</span>
-              </div>
-            </div>
-          </div>
+            )}</div>
         </div>
       </div>
+
+      {/* Login Prompt Modal */}
+      <LoginPrompt
+        isVisible={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        message="You need to be logged in to start bulk follow operations."
+      />
     </div>
   );
 };

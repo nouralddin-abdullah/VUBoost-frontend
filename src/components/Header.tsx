@@ -49,16 +49,16 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
           >
             <Menu className="w-5 h-5" />
           </button>
-        </div>
+        </div>        <div className="flex items-center space-x-4">
+          {/* Notifications - only show for authenticated users */}
+          {user && (
+            <button className="p-2 rounded-md hover:bg-gray-100 relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+          )}
 
-        <div className="flex items-center space-x-4">
-          {/* Notifications */}
-          <button className="p-2 rounded-md hover:bg-gray-100 relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
-          {/* User profile */}
+          {/* User profile or Login/Signup buttons */}
           <div className="relative" ref={userMenuRef}>
             {isLoading ? (
               <div className="flex items-center space-x-3 p-2">
@@ -68,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
                   <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
                 </div>
               </div>
-            ) : (
+            ) : user ? (
               <>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
@@ -122,6 +122,22 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
                   </div>
                 )}
               </>
+            ) : (
+              /* Login/Signup buttons for unauthenticated users */
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors duration-200"
+                >
+                  Sign Up
+                </button>
+              </div>
             )}
           </div>
         </div>

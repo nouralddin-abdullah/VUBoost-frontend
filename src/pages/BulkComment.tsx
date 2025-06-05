@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { MessageCircle, Play, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import PostSelector from '../components/PostSelector';
+import LoginPrompt from '../components/LoginPrompt';
 import { useBulkComment } from '../hooks/useBulkComment';
+import { useAuth } from '../hooks/useAuth';
 
 const BulkComment: React.FC = () => {
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const { 
     isRunning, 
     results, 
@@ -15,6 +18,8 @@ const BulkComment: React.FC = () => {
     startBulkComment, 
     reset 
   } = useBulkComment();
+  const { user } = useAuth();
+  
   const handlePostSelect = (postId: string) => {
     setSelectedPost(postId);
     reset(); // Reset previous results when selecting a new post
@@ -28,14 +33,17 @@ const BulkComment: React.FC = () => {
   const clearSelectedPost = () => {
     setSelectedPost(null);
     reset();
-  };
-  const handleStart = async () => {
+  };  const handleStart = async () => {
     if (!selectedPost) {
       alert('Please select a post to comment on');
       return;
     }
+      // Check if user is authenticated
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
     
-    // Backend handles comments automatically
     await startBulkComment(selectedPost);
   };
 
@@ -210,10 +218,16 @@ const BulkComment: React.FC = () => {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            )}          </div>
         </div>
       </div>
+
+      {/* Login Prompt Modal */}
+      <LoginPrompt
+        isVisible={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        message="You need to be logged in to start bulk comment operations."
+      />
     </div>
   );
 };

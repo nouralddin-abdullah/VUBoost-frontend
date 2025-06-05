@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Heart, Play, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import PostSelector from '../components/PostSelector';
+import LoginPrompt from '../components/LoginPrompt';
 import { useBulkLike } from '../hooks/useBulkLike';
+import { useAuth } from '../hooks/useAuth';
 
 const BulkLike: React.FC = () => {
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const { 
     isRunning, 
     results, 
@@ -13,8 +16,9 @@ const BulkLike: React.FC = () => {
     successCount, 
     failedCount, 
     startBulkLike, 
-    reset 
-  } = useBulkLike();
+    reset   } = useBulkLike();
+  const { user } = useAuth();
+  
   const handlePostSelect = (postId: string) => {
     setSelectedPost(postId);
     reset(); // Reset previous results when selecting a new post
@@ -29,10 +33,14 @@ const BulkLike: React.FC = () => {
     setSelectedPost(null);
     reset();
   };
-
   const handleStart = async () => {
     if (!selectedPost) {
       alert('Please select a post to like');
+      return;
+    }
+      // Check if user is authenticated
+    if (!user) {
+      setShowLoginPrompt(true);
       return;
     }
     
@@ -176,10 +184,16 @@ const BulkLike: React.FC = () => {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            )}          </div>
         </div>
       </div>
+
+      {/* Login Prompt Modal */}
+      <LoginPrompt
+        isVisible={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        message="You need to be logged in to start bulk like operations."
+      />
     </div>
   );
 };

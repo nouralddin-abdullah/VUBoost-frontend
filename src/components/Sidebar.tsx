@@ -8,9 +8,9 @@ import {
   Settings, 
   BarChart3,
   Home,
-  Activity
+  Activity,
+  MessageSquare
 } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
 import type { NavItem } from '../types';
 
 const navigationItems: NavItem[] = [
@@ -43,17 +43,16 @@ const navigationItems: NavItem[] = [
   },
   {
     id: 'account-manager',
-    label: 'Account Manager',
+    label: 'Spam Rooms',
     icon: Users,
     path: '/accounts',
-    description: 'Manage IMVU accounts'
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
+    description: 'Make rooms full'
+  },  {
+    id: 'plans',
+    label: 'Plans',
     icon: BarChart3,
-    path: '/analytics',
-    description: 'View performance metrics'
+    path: '/plans',
+    description: 'Basic & Premium subscription plans'
   },
   {
     id: 'activity-log',
@@ -77,31 +76,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
-  const { user, isLoading } = useAuth();
-
-  const getInitials = (firstName: string, lastName: string) => {
-    const first = firstName?.charAt(0) || '';
-    const last = lastName?.charAt(0) || '';
-    return `${first}${last}`.toUpperCase() || 'U';
-  };
-
-  const getUserDisplayName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    if (user?.firstName) {
-      return user.firstName;
-    }
-    if (user?.email) {
-      return user.email;
-    }
-    return 'User';
-  };
-
-  const getUserRole = () => {
-    return user?.role || 'user';
-  };
-
   return (
     <>
       {/* Mobile overlay */}
@@ -166,27 +140,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             })}
           </nav>          {/* Footer */}
           <div className="p-4 border-t border-gray-200">
-            {isLoading ? (
-              <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
-                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                <div className="flex-1 min-w-0">
-                  <div className="w-20 h-4 bg-gray-200 rounded animate-pulse mb-1"></div>
-                  <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
-                </div>
+            <a
+              href="https://discord.gg/bBWAKqfyvC"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-3 p-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors duration-200 group"
+            >
+              <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
+                <MessageSquare className="w-4 h-4 text-white" />
               </div>
-            ) : (
-              <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
-                <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                  <span className="text-primary-600 font-medium text-sm">
-                    {user?.firstName && user?.lastName ? getInitials(user.firstName, user.lastName) : 'U'}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{getUserDisplayName()}</p>
-                  <p className="text-xs text-gray-500 truncate capitalize">{getUserRole()}</p>
-                </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-indigo-700 group-hover:text-indigo-800">Join Our Discord</p>
+                <p className="text-xs text-indigo-600 group-hover:text-indigo-700">Connect with the community</p>
               </div>
-            )}
+            </a>
           </div>
         </div>
       </aside>

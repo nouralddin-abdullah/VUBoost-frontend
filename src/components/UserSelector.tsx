@@ -12,24 +12,44 @@ interface ImvuUser {
 }
 
 interface UserSelectorProps {
-  selectedUsers: ImvuUser[];
+  selectedUsers?: ImvuUser[];
+  selectedUser?: ImvuUser | null;
   onUserAdd: (user: ImvuUser) => void;
-  onUserRemove: (userId: number) => void;
+  onUserRemove: (userId?: number) => void;
   title?: string;
   description?: string;
+  singleSelection?: boolean;
 }
 
 const UserSelector: React.FC<UserSelectorProps> = ({ 
   selectedUsers, 
+  selectedUser,
   onUserAdd, 
   onUserRemove, 
   title = "Search Users",
-  description = "Search for IMVU users to add to your target list"
+  description = "Search for IMVU users to add to your target list",
+  singleSelection = false
 }) => {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<ImvuUser | null>(null);
   const [error, setError] = useState('');
+
+  // Get the current selection count
+  const getSelectionCount = () => {
+    if (singleSelection) {
+      return selectedUser ? 1 : 0;
+    }
+    return selectedUsers?.length || 0;
+  };
+
+  // Check if a user is already selected
+  const isUserSelected = (userToCheck: ImvuUser) => {
+    if (singleSelection) {
+      return selectedUser?.legacy_cid === userToCheck.legacy_cid;
+    }
+    return selectedUsers?.some(u => u.legacy_cid === userToCheck.legacy_cid) || false;
+  };
 
   const searchUser = async () => {
     if (!username.trim()) {
@@ -123,31 +143,28 @@ const UserSelector: React.FC<UserSelectorProps> = ({
       searchUser();
     }
   };
-
   const handleAddUser = () => {
     if (user) {
-      // Check if user is already in the list
-      const isAlreadyAdded = selectedUsers.some(u => u.legacy_cid === user.legacy_cid);
-      if (!isAlreadyAdded) {
+      // Check if user is already selected
+      if (!isUserSelected(user)) {
         onUserAdd(user);
         setUser(null);
         setUsername('');
         setError('');
       } else {
-        setError('User is already in your target list');
+        setError('User is already selected');
       }
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6">      {/* Header */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-1">{title}</h3>
         <p className="text-sm text-gray-600">{description}</p>
-        {selectedUsers.length > 0 && (
+        {getSelectionCount() > 0 && (
           <p className="text-sm text-blue-600 mt-1">
-            {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} added
+            {singleSelection ? '1 user selected' : `${getSelectionCount()} user${getSelectionCount() !== 1 ? 's' : ''} added`}
           </p>
         )}
       </div>
@@ -236,10 +253,8 @@ const UserSelector: React.FC<UserSelectorProps> = ({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Selected Users List */}
-      {selectedUsers.length > 0 && (
+      )}      {/* Selected Users List */}
+      {!singleSelection && selectedUsers && selectedUsers.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-md font-medium text-gray-900">
@@ -276,6 +291,42 @@ const UserSelector: React.FC<UserSelectorProps> = ({
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Selected User Display for Single Selection */}
+      {singleSelection && selectedUser && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-md font-medium text-gray-900">Selected User</h4>
+            <button
+              onClick={() => onUserRemove()}
+              className="text-sm text-red-600 hover:text-red-700"
+            >
+              Remove
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+            <img
+              src={selectedUser.thumbnail_url || selectedUser.avatar_image}
+              alt={selectedUser.display_name}
+              className="w-10 h-10 rounded-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/40x40?text=U';
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{selectedUser.display_name}</p>
+              <p className="text-xs text-gray-500">@{selectedUser.username}</p>
+            </div>
+            <button
+              onClick={() => onUserRemove()}
+              className="text-red-600 hover:text-red-700 p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
