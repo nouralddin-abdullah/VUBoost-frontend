@@ -34,7 +34,6 @@ export const useBulkFollow = () => {
     successCount: 0,
     failedCount: 0,
   });
-
   const startBulkFollow = async (username: string) => {
     if (!username) {
       setState(prev => ({ ...prev, error: 'Username is required' }));
@@ -50,15 +49,15 @@ export const useBulkFollow = () => {
       failedCount: 0,
     });
 
-    try {      const response = await fetch('http://localhost:3000/api/auto-follow', {
+    try {
+      const request: BulkFollowRequest = { usernameToFollow: username };
+      const response = await fetch('http://localhost:3000/api/auto-follow', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify({
-          usernameToFollow: username
-        })
+        body: JSON.stringify(request)
       });
 
       if (!response.ok) {
