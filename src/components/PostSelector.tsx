@@ -59,38 +59,38 @@ const PostSelector: React.FC<PostSelectorProps> = ({
       let data = null;
       let lastError = null;
 
-      // First try: corsproxy.io
+      // First try: allorigins (primary choice)
       try {
-        const proxyUrl = 'https://corsproxy.io/?';
+        const proxyUrl = 'https://api.allorigins.win/get?url=';
         const targetUrl = encodeURIComponent(`https://api.imvu.com/user?username=${username.trim()}`);
         const response = await fetch(`${proxyUrl}${targetUrl}`);
-        data = await response.json();
+        const proxyData = await response.json();
+        
+        if (!proxyData.contents) {
+          throw new Error('No contents in proxy response');
+        }
+        data = JSON.parse(proxyData.contents);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
       } catch (err) {
         lastError = err;
-        console.warn('corsproxy.io failed:', err);
+        console.warn('allorigins failed:', err);
         
-        // Second try: allorigins (different format)
+        // Second try: corsproxy.io (fallback)
         try {
-          const proxyUrl = 'https://api.allorigins.win/get?url=';
+          const proxyUrl = 'https://corsproxy.io/?';
           const targetUrl = encodeURIComponent(`https://api.imvu.com/user?username=${username.trim()}`);
           const response = await fetch(`${proxyUrl}${targetUrl}`);
-          const proxyData = await response.json();
-          
-          if (!proxyData.contents) {
-            throw new Error('No contents in proxy response');
-          }
-          data = JSON.parse(proxyData.contents);
+          data = await response.json();
           
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
         } catch (err2) {
           lastError = err2;
-          console.warn('allorigins failed:', err2);
+          console.warn('corsproxy.io failed:', err2);
           throw err2;
         }
       }
@@ -137,44 +137,43 @@ const PostSelector: React.FC<PostSelectorProps> = ({
       setLoading(false);
     }
   };  const fetchUserPosts = async (feedUrl: string) => {
-    setLoadingPosts(true);
-    try {
+    setLoadingPosts(true);    try {
       // Try multiple CORS proxy services for better reliability
       let data = null;
       let lastError = null;
 
-      // First try: corsproxy.io
+      // First try: allorigins (primary choice)
       try {
-        const proxyUrl = 'https://corsproxy.io/?';
+        const proxyUrl = 'https://api.allorigins.win/get?url=';
         const targetUrl = encodeURIComponent(feedUrl);
         const response = await fetch(`${proxyUrl}${targetUrl}`);
-        data = await response.json();
+        const proxyData = await response.json();
+        
+        if (!proxyData.contents) {
+          throw new Error('No contents in proxy response');
+        }
+        data = JSON.parse(proxyData.contents);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
       } catch (err) {
         lastError = err;
-        console.warn('corsproxy.io failed for posts:', err);
+        console.warn('allorigins failed for posts:', err);
         
-        // Second try: allorigins (different format)
+        // Second try: corsproxy.io (fallback)
         try {
-          const proxyUrl = 'https://api.allorigins.win/get?url=';
+          const proxyUrl = 'https://corsproxy.io/?';
           const targetUrl = encodeURIComponent(feedUrl);
           const response = await fetch(`${proxyUrl}${targetUrl}`);
-          const proxyData = await response.json();
-          
-          if (!proxyData.contents) {
-            throw new Error('No contents in proxy response');
-          }
-          data = JSON.parse(proxyData.contents);
+          data = await response.json();
           
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
         } catch (err2) {
           lastError = err2;
-          console.warn('allorigins failed for posts:', err2);
+          console.warn('corsproxy.io failed for posts:', err2);
           throw err2;
         }
       }
